@@ -808,7 +808,6 @@ int errorest_1(unsigned int epoch) {
     
     if (!(kb=get_thread(epoch))) return 73; /* cannot find key block */
     
-
     /* set role in block to alice (initiating the seed) in keybloc struct */
     kb->role = 0;
     /* seed the rng, (the state has to be kept with the thread, use a lock
@@ -828,7 +827,12 @@ int errorest_1(unsigned int epoch) {
 	if (f_di <= 0) return 41; /* no error extractable */
 	bits_needed = testbits_needed(f_inierr);
 	
-	if (bits_needed >=kb->initialbits) return 42; /* not possible */
+	if (bits_needed >=kb->initialbits) {
+		printf("%s%d", "bits_needed: ", bits_needed);
+		printf("%s", "\n");
+		printf("%s%d", "initialbits: ", kb -> initialbits);
+		return 42;
+	}  /* not possible */
 	/* fill message with sample bits */
 	msg1 = fillsamplemessage(kb, bits_needed,0,kb->BellValue);
     }

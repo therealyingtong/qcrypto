@@ -37,7 +37,7 @@
 		  [-e ec_in_pipe -E ec_out_pipe ]
 		  [-k] 
 		  [-m messagesource -M messagedestintion ]
-		  [-p portnumber]
+		  [-p portnumber] [-P target_portnumber]
 		  [-v verbosity]
 
  parameters:
@@ -63,6 +63,7 @@
 		    parameter of this file.
   -p portnum:       port number used for communication. By default, this is
                     port number 4852.
+  -P target_portnum: port number used by transferd on other machine	
   -v verbosity:     choose verbosity. 0: no normal output to stdout
                     1: connect/disconnect to stdout
 		    2: talk about receive/send events
@@ -269,6 +270,7 @@ int main(int argc, char *argv[]) {
     int sendskt,recskt,commskt;
     FILE *cmdhandle;
     int portnumber=DEFAULT_PORT; /* defines communication port */
+	int target_portnumber=DEFAULT_PORT; /* defines port used by transferd on target machine */
     int msginhandle=0;
     int ercinhandle=0,ercouthandle=0; /* error correction pipes */
     unsigned int sendsktlen,remotelen;
@@ -331,6 +333,10 @@ int main(int argc, char *argv[]) {
 	    case 'p': /* set portnumber */
 		if (sscanf(optarg,"%d",&portnumber)!=1) return -emsg(65);
 		if ((portnumber<MINPORT) || (portnumber>MAXPORT)) return -emsg(66);
+		break;
+		case 'P': /* set target_portnumber */
+		if (sscanf(optarg,"%d",&target_portnumber)!=1) return -emsg(65);
+		if ((target_portnumber<MINPORT) || (target_portnumber>MAXPORT)) return -emsg(66);
 		break;
 	}
     }
@@ -407,7 +413,7 @@ int main(int argc, char *argv[]) {
 	}}
     /* extract host-IP */
     sendadr.sin_addr=*(struct in_addr *)*remoteinfo->h_addr_list;
-    sendadr.sin_port=htons(portnumber);
+    sendadr.sin_port=htons(target_portnumber);
 
     /* create socket for server / receiving files */
     recadr.sin_family=AF_INET;
@@ -529,7 +535,11 @@ int main(int argc, char *argv[]) {
 	    if (!cmdmode) FD_SET(fileno(cmdhandle),&readqueue);
 	    if (sendbf) FD_SET(commskt,&writequeue); /* if we need to write */
 	    if (typemode[6] && !messagemode) FD_SET(msginhandle,&readqueue);
-	    if (typemode[8] && (packinmode!=4)) FD_SET(ercinhandle,&readqueue);
+	    if (typemode[8] && (packinmode!=4)) {
+			FD_SET(ercinhandle,&readqueue);
+			printf("set ercinhandle\n");
+			printf(readqueue.__fds_bits);
+		} 
 	    timeout=HALFSECOND;
 	    retval=select(FD_SETSIZE,&readqueue,&writequeue,NULL,NULL);
 	    if (retval<0) return -emsg(39);
@@ -914,7 +924,7 @@ int main(int argc, char *argv[]) {
 		}}
 	    /* extract host-IP */
 	    sendadr.sin_addr=*(struct in_addr *)*remoteinfo->h_addr_list;
-	    sendadr.sin_port=htons(portnumber);
+	    sendadr.sin_port=htons(target_portnumber);
 	}
 	if (verbosity>0) { 
 	    printf("disconnected.\n");
